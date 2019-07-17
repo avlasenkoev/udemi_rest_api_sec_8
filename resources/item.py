@@ -1,5 +1,5 @@
 from flask_restful import Resource, reqparse
-from flask_jwt import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_claims, jwt_optional, get_jwt_identity
 from models.item import ItemModel
 
 
@@ -14,7 +14,7 @@ class Item(Resource):
                         required=True,
                         help='Every item needs store id')
 
-    @jwt_required()
+    @jwt_required
     def get(self, name):
         item = ItemModel.find_by_name(name)
         if item:
@@ -33,7 +33,12 @@ class Item(Resource):
             return {'message': 'An error occurred inserting the item'}, 500
         return item.json(), 201
 
+    @jwt_required
     def delete(self, name):
+        clames = get_jwt_claims()
+        if not clames['is_admin']:
+            return {'message': 'You are not an admin'}, 401
+
         item = ItemModel.find_by_name(name)
         if not item:
             return {'message': 'An item {0} not found'.format(name)}, 404
@@ -53,5 +58,12 @@ class Item(Resource):
 
 
 class ItemList(Resource):
+    @jwt_optional
     def get(self):
-        return {'items': ItemModel.get_all_objects_from_db()}
+        user_id = get_jwt_identity()
+        items = ItemModel.get_all_objects_from_db()
+        if user_id:
+            return {'items': items}, 200
+        return {'items': [item['name'] for item in items],
+                'message': 'You must login for getting more details'}
+

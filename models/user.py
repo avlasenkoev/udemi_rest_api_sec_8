@@ -26,3 +26,9 @@ class UserModel(db.Model):
     def delete_from_db(self):
         db.session.delete(self)
         db.session.commit()
+
+    def json(self):
+        return {
+            'username': self.username,
+            'id': self.id
+        }
